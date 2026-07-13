@@ -14,10 +14,12 @@ from PIL import Image, ImageDraw, ImageFont
 BASE_DIR = Path(__file__).resolve().parent
 W, H = 1080, 1350
 
-FONT_DIR = Path("/System/Library/Fonts/Supplemental")
-FONT_BOLD = FONT_DIR / "Arial Bold.ttf"
-FONT_BLACK = FONT_DIR / "Arial Black.ttf"
-FONT_REGULAR = FONT_DIR / "Arial.ttf"
+# Bundled fonts (not OS system fonts) so rendering is identical on macOS and on
+# GitHub Actions' Ubuntu runners. Anton and Ubuntu are free, open-license (OFL/UFL).
+FONT_DIR = Path(__file__).resolve().parent / "fonts"
+FONT_BOLD = FONT_DIR / "Ubuntu-Bold.ttf"
+FONT_BLACK = FONT_DIR / "Anton-Regular.ttf"
+FONT_REGULAR = FONT_DIR / "Ubuntu-Regular.ttf"
 
 # Palette per region so the feed doesn't look monotonous, but stays consistent as a brand
 PALETTE = {
@@ -105,7 +107,7 @@ def make_card(fact, out_path, page_handle="@YourPage"):
     cta_font = ImageFont.truetype(str(FONT_REGULAR), 30)
     draw.rectangle([0, H - 130, W, H], fill=(0, 0, 0))
     draw.text((margin, H - 100), page_handle, font=footer_font, fill=accent)
-    draw.text((margin, H - 55), "Follow for daily history facts →", font=cta_font, fill=(220, 220, 220))
+    draw.text((margin, H - 55), "Follow for daily history facts", font=cta_font, fill=(220, 220, 220))
 
     img.save(out_path, quality=95)
     return out_path

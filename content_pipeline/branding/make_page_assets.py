@@ -12,10 +12,12 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
 
-FONT_DIR = Path("/System/Library/Fonts/Supplemental")
-FONT_BLACK = FONT_DIR / "Arial Black.ttf"
-FONT_BOLD = FONT_DIR / "Arial Bold.ttf"
-FONT_REGULAR = FONT_DIR / "Arial.ttf"
+# Bundled fonts (not OS system fonts) so rendering is identical on macOS and on
+# GitHub Actions' Ubuntu runners. Anton and Ubuntu are free, open-license (OFL/UFL).
+FONT_DIR = Path(__file__).resolve().parent.parent / "fonts"
+FONT_BLACK = FONT_DIR / "Anton-Regular.ttf"
+FONT_BOLD = FONT_DIR / "Ubuntu-Bold.ttf"
+FONT_REGULAR = FONT_DIR / "Ubuntu-Regular.ttf"
 
 BG_TOP = (28, 24, 46)
 BG_BOTTOM = (10, 10, 18)
