@@ -1,0 +1,6 @@
+.venv/
+__pycache__/
+*.pyc
+fb_auto_poster/.env
+.DS_Store
+.claude/

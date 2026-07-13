@@ -1,0 +1,45 @@
+name: Auto-post history facts to Facebook Page
+
+# Times below are set for IST (UTC+5:30), based on your account's India address.
+# GitHub Actions cron is always UTC. If you're not in IST, shift these.
+#   9:00 AM IST  -> 03:30 UTC
+#   12:00 PM IST -> 06:30 UTC
+#   6:00 PM IST  -> 12:30 UTC
+on:
+  schedule:
+    - cron: "30 3 * * *"
+    - cron: "30 6 * * *"
+    - cron: "30 12 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install -r content_pipeline/requirements.txt
+          pip install -r fb_auto_poster/requirements.txt
+
+      - name: Generate and post one fact
+        env:
+          FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
+          FB_PAGE_ACCESS_TOKEN: ${{ secrets.FB_PAGE_ACCESS_TOKEN }}
+          PAGE_HANDLE: "@NatureWonders9"
+        run: python3 auto_post_one.py
+
+      - name: Commit updated dedupe log
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add content_pipeline/used_facts.json
+          git diff --cached --quiet || git commit -m "Update used_facts log [skip ci]"
+          git push
