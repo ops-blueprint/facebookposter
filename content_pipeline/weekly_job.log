@@ -1,0 +1,12 @@
+Generating 7 day(s) x 1 fact(s)/day starting 2026-07-13:
+  2026-07-13: 1 fact(s) -> /Users/venumannuru/facebook-automation/content_pipeline/output/2026-07-13
+  2026-07-14: 1 fact(s) -> /Users/venumannuru/facebook-automation/content_pipeline/output/2026-07-14
+  2026-07-15: 1 fact(s) -> /Users/venumannuru/facebook-automation/content_pipeline/output/2026-07-15
+  2026-07-16: 1 fact(s) -> /Users/venumannuru/facebook-automation/content_pipeline/output/2026-07-16
+  2026-07-17: 1 fact(s) -> /Users/venumannuru/facebook-automation/content_pipeline/output/2026-07-17
+  2026-07-18: 1 fact(s) -> /Users/venumannuru/facebook-automation/content_pipeline/output/2026-07-18
+  2026-07-19: 1 fact(s) -> /Users/venumannuru/facebook-automation/content_pipeline/output/2026-07-19
+
+Done. 7 day(s) of content ready under output/.
+Open each folder and queue fact_1.png (+ its caption from captions.txt) into
+Facebook's native Schedule button, dated for that folder's day.
