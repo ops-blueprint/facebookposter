@@ -28,6 +28,7 @@ PALETTE = {
     "Australia": {"bg": (10, 30, 40), "accent": (250, 204, 21)},
     "Europe":    {"bg": (24, 20, 40), "accent": (168, 85, 247)},
     "World":     {"bg": (20, 20, 20), "accent": (34, 197, 94)},
+    "Trending":  {"bg": (28, 22, 12), "accent": (245, 158, 11)},
 }
 
 
@@ -76,22 +77,28 @@ def make_card(fact, out_path, page_handle="@YourPage"):
     # accent bar top
     draw.rectangle([0, 0, W, 14], fill=accent)
 
-    # Eyebrow: region + "ON THIS DAY" (plain text only -- emoji glyphs render as
-    # tofu boxes with Arial, so region is spelled out instead of using the flag)
+    # Eyebrow: region + suffix (plain text only -- emoji glyphs render as tofu
+    # boxes with our bundled fonts, so region is spelled out instead of using flags)
+    eyebrow_suffix = fact.get("eyebrow_suffix", "ON THIS DAY")
     eyebrow_font = ImageFont.truetype(str(FONT_BOLD), 40)
-    eyebrow = f"{fact['region'].upper()} · ON THIS DAY"
+    eyebrow = f"{fact['region'].upper()} · {eyebrow_suffix}"
     draw.text((margin, 90), eyebrow, font=eyebrow_font, fill=accent)
 
-    # Year, big
-    year_font = ImageFont.truetype(str(FONT_BLACK), 130)
-    year_text = str(fact["year"]) if fact.get("year") else ""
-    draw.text((margin, 150), year_text, font=year_font, fill=(255, 255, 255))
-
-    # divider
-    draw.rectangle([margin, 330, margin + 120, 336], fill=accent)
+    has_year = bool(fact.get("year"))
+    if has_year:
+        # Year, big
+        year_font = ImageFont.truetype(str(FONT_BLACK), 130)
+        draw.text((margin, 150), str(fact["year"]), font=year_font, fill=(255, 255, 255))
+        # divider
+        draw.rectangle([margin, 330, margin + 120, 336], fill=accent)
+        area_top = 400
+    else:
+        # No year (general facts) -- skip that block, divider sits right under the eyebrow
+        draw.rectangle([margin, 170, margin + 120, 176], fill=accent)
+        area_top = 240
 
     # Fact body text, auto-fit and vertically centered in the space below the divider
-    area_top, area_bottom = 400, H - 160
+    area_bottom = H - 160
     body_font, lines, line_height = fit_text(
         draw, fact["text"], FONT_REGULAR,
         max_width=W - 2 * margin, max_height=area_bottom - area_top, start_size=72, min_size=34
@@ -107,7 +114,7 @@ def make_card(fact, out_path, page_handle="@YourPage"):
     cta_font = ImageFont.truetype(str(FONT_REGULAR), 30)
     draw.rectangle([0, H - 130, W, H], fill=(0, 0, 0))
     draw.text((margin, H - 100), page_handle, font=footer_font, fill=accent)
-    draw.text((margin, H - 55), "Follow for daily history facts", font=cta_font, fill=(220, 220, 220))
+    draw.text((margin, H - 55), "Follow for daily facts", font=cta_font, fill=(220, 220, 220))
 
     img.save(out_path, quality=95)
     return out_path

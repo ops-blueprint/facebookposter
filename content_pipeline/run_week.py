@@ -16,6 +16,7 @@ Usage:
 import argparse
 import datetime
 import json
+import random
 import sys
 from pathlib import Path
 
@@ -23,23 +24,47 @@ BASE_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(BASE_DIR))
 
 import fetch_facts
+import fetch_trending_facts
 import make_cards
 import generate_captions
+
+# Weighted toward general "interesting to anyone" content, with history mixed in for variety.
+TRENDING_WEIGHT = 0.6
+
+
+def pick_mixed_facts(date, count, used):
+    """Fill `count` slots by drawing from history + general-trending sources, mixed."""
+    picked = []
+    events = None
+    for _ in range(count):
+        source = "trending" if random.random() < TRENDING_WEIGHT else "history"
+        facts = []
+        if source == "trending":
+            facts = fetch_trending_facts.pick_trending_facts(count=1, used=used)
+        if not facts:
+            if events is None:
+                events = fetch_facts.fetch_events(date.month, date.day)
+            facts = fetch_facts.pick_facts(events, count=1, used=used)
+        if not facts:
+            facts = fetch_trending_facts.pick_trending_facts(count=1, used=used)
+        if not facts:
+            break
+        fact = facts[0]
+        picked.append(fact)
+        used.add(fact["text"][:80])
+    return picked
 
 
 def generate_day(date, count, handle):
     out_dir = BASE_DIR / "output" / date.isoformat()
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    events = fetch_facts.fetch_events(date.month, date.day)
     used = fetch_facts.load_used()
-    facts = fetch_facts.pick_facts(events, count, used)
+    facts = pick_mixed_facts(date, count, used)
     if not facts:
         print(f"  {date.isoformat()}: no new facts available, skipping")
         return None
 
-    for f in facts:
-        used.add(f["text"][:80])
     fetch_facts.save_used(used)
     (out_dir / "facts.json").write_text(json.dumps(facts, indent=2))
 

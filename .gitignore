@@ -4,3 +4,5 @@ __pycache__/
 fb_auto_poster/.env
 .DS_Store
 .claude/
+content_pipeline/weekly_job.log
+content_pipeline/weekly_job.err.log
