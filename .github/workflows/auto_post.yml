@@ -2,25 +2,13 @@ name: Auto-post history facts to Facebook Page
 
 # Times below are set for IST (UTC+5:30), based on your account's India address.
 # GitHub Actions cron is always UTC. If you're not in IST, shift these.
-# 8x/day, every 2 hours across waking hours:
-#   6:00 AM IST  -> 00:30 UTC
-#   8:00 AM IST  -> 02:30 UTC
-#   10:00 AM IST -> 04:30 UTC
-#   12:00 PM IST -> 06:30 UTC
-#   2:00 PM IST  -> 08:30 UTC
-#   4:00 PM IST  -> 10:30 UTC
-#   6:00 PM IST  -> 12:30 UTC
-#   8:00 PM IST  -> 14:30 UTC
+# 2x/day:
+#   6:00 AM IST -> 00:30 UTC
+#   6:00 PM IST -> 12:30 UTC
 on:
   schedule:
     - cron: "30 0 * * *"
-    - cron: "30 2 * * *"
-    - cron: "30 4 * * *"
-    - cron: "30 6 * * *"
-    - cron: "30 8 * * *"
-    - cron: "30 10 * * *"
     - cron: "30 12 * * *"
-    - cron: "30 14 * * *"
   workflow_dispatch: {}
 
 jobs:
