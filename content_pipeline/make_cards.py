@@ -121,6 +121,74 @@ def make_card(fact, out_path, page_handle="@YourPage"):
     return out_path
 
 
+REEL_W, REEL_H = 1080, 1920
+
+
+def make_card_vertical(fact, out_path, page_handle="@YourPage"):
+    """9:16 version for Reels. Keeps text clear of where Facebook's own Reels UI
+    (caption, follow button, like/comment/share icons) overlays the bottom/right
+    edges when actually played back in the app."""
+    colors = PALETTE.get(fact["region"], PALETTE["World"])
+    bg = colors["bg"]
+    accent = colors["accent"]
+    top = tuple(min(255, c + 20) for c in bg)
+    bottom = tuple(max(0, c - 15) for c in bg)
+
+    img = Image.new("RGB", (REEL_W, REEL_H), bg)
+    draw_gradient_custom(img, top, bottom, REEL_W, REEL_H)
+    draw = ImageDraw.Draw(img)
+
+    margin = 90
+    safe_right = REEL_W - 160
+
+    draw.rectangle([0, 0, REEL_W, 16], fill=accent)
+
+    eyebrow_suffix = fact.get("eyebrow_suffix", "ON THIS DAY")
+    eyebrow_font = ImageFont.truetype(str(FONT_BOLD), 44)
+    eyebrow = f"{fact['region'].upper()} · {eyebrow_suffix}"
+    draw.text((margin, 140), eyebrow, font=eyebrow_font, fill=accent)
+
+    has_year = bool(fact.get("year"))
+    if has_year:
+        year_font = ImageFont.truetype(str(FONT_BLACK), 170)
+        draw.text((margin, 220), str(fact["year"]), font=year_font, fill=(255, 255, 255))
+        draw.rectangle([margin, 430, margin + 150, 438], fill=accent)
+        area_top = 500
+    else:
+        draw.rectangle([margin, 220, margin + 150, 228], fill=accent)
+        area_top = 300
+
+    area_bottom = 1380
+    body_font, lines, line_height = fit_text(
+        draw, fact["text"], FONT_REGULAR,
+        max_width=safe_right - margin, max_height=area_bottom - area_top, start_size=64, min_size=34
+    )
+    block_height = line_height * len(lines)
+    y = area_top + max(0, (area_bottom - area_top - block_height) // 2)
+    for line in lines:
+        draw.text((margin, y), line, font=body_font, fill=(240, 240, 240))
+        y += line_height
+
+    # Handle placed above the zone where Facebook's own Reels caption/UI usually sits
+    footer_font = ImageFont.truetype(str(FONT_BOLD), 38)
+    cta_font = ImageFont.truetype(str(FONT_REGULAR), 32)
+    draw.text((margin, 1500), page_handle, font=footer_font, fill=accent)
+    draw.text((margin, 1550), "Follow for daily facts", font=cta_font, fill=(220, 220, 220))
+
+    img.save(out_path, quality=95)
+    return out_path
+
+
+def draw_gradient_custom(img, top_color, bottom_color, w, h):
+    draw = ImageDraw.Draw(img)
+    for y in range(h):
+        t = y / h
+        r = int(top_color[0] * (1 - t) + bottom_color[0] * t)
+        g = int(top_color[1] * (1 - t) + bottom_color[1] * t)
+        b = int(top_color[2] * (1 - t) + bottom_color[2] * t)
+        draw.line([(0, y), (w, y)], fill=(r, g, b))
+
+
 def main():
     parser = argparse.ArgumentParser(description="Render fact cards from a facts JSON file")
     parser.add_argument("--facts", default=str(BASE_DIR / "facts_today.json"))

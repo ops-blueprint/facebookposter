@@ -83,6 +83,25 @@ def post_photo_to_page(page_id: str, access_token: str, image_path: Path, captio
     return resp.json()
 
 
+def post_video_to_page(page_id: str, access_token: str, video_path: Path, caption: str, dry_run: bool = False):
+    """Upload a short video to a Page's /videos endpoint. Facebook auto-treats
+    vertical short-form video uploaded this way as a Reel -- no separate Reels
+    Publishing API needed for clips this size."""
+    url = f"https://graph.facebook.com/{GRAPH_API_VERSION}/{page_id}/videos"
+    if dry_run:
+        print(f"[dry-run] Would POST {video_path.name} to {url} with caption:\n{caption}\n")
+        return {"dry_run": True}
+
+    with open(video_path, "rb") as f:
+        files = {"source": f}
+        data = {"description": caption, "access_token": access_token}
+        resp = requests.post(url, files=files, data=data, timeout=120)
+
+    if not resp.ok:
+        raise RuntimeError(f"Facebook API error {resp.status_code}: {resp.text}")
+    return resp.json()
+
+
 def main():
     load_dotenv(BASE_DIR / ".env")
 
