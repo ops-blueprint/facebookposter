@@ -38,6 +38,22 @@ TRENDING_QUESTIONS = [
     "What's a fact YOU know that would surprise us?",
 ]
 
+VIRAL_HOOKS = [
+    "This is what everyone's searching for right now 🔥",
+    "Trending right now, in case you missed it:",
+    "Here's what the internet is talking about today.",
+    "Catching up on today's biggest search trend?",
+    "This is blowing up right now:",
+]
+
+VIRAL_QUESTIONS = [
+    "Did you already know about this?",
+    "Were you already following this?",
+    "What do you think? Let us know below.",
+    "Tag someone who needs to see this.",
+    "Worth knowing, right?",
+]
+
 REGION_HASHTAGS = {
     "USA": ["#USHistory", "#AmericanHistory", "#USA"],
     "UK": ["#UKHistory", "#BritishHistory", "#UnitedKingdom"],
@@ -45,25 +61,33 @@ REGION_HASHTAGS = {
     "Europe": ["#EuropeanHistory", "#Europe", "#WorldHistory"],
     "World": ["#WorldHistory", "#History"],
     "Trending": ["#InterestingFacts", "#TIL", "#MindBlown"],
+    "Viral": ["#WhatsTrending", "#InTheNews"],
 }
 
 BASE_HASHTAGS = ["#OnThisDay", "#HistoryFacts", "#DidYouKnow", "#TodayInHistory", "#FactOfTheDay"]
 TRENDING_BASE_HASHTAGS = ["#DidYouKnow", "#FactOfTheDay", "#Facts", "#Trivia"]
+VIRAL_BASE_HASHTAGS = ["#TrendingNow", "#Viral", "#Trending"]
 
 
 def build_caption(fact, index):
-    is_trending = fact["region"] == "Trending" or not fact.get("year")
+    is_viral = fact["region"] == "Viral"
+    is_trending = not is_viral and (fact["region"] == "Trending" or not fact.get("year"))
     text = fact["text"]
 
-    if is_trending:
+    if is_viral:
+        hook = VIRAL_HOOKS[index % len(VIRAL_HOOKS)]
+        question = VIRAL_QUESTIONS[index % len(VIRAL_QUESTIONS)]
+        hashtags = " ".join(dict.fromkeys(VIRAL_BASE_HASHTAGS + REGION_HASHTAGS.get(fact["region"], [])))
+        body = f"🔥 {text}"
+    elif is_trending:
         hook = TRENDING_HOOKS[index % len(TRENDING_HOOKS)]
         question = TRENDING_QUESTIONS[index % len(TRENDING_QUESTIONS)]
-        hashtags = " ".join(TRENDING_BASE_HASHTAGS + REGION_HASHTAGS.get(fact["region"], []))
+        hashtags = " ".join(dict.fromkeys(TRENDING_BASE_HASHTAGS + REGION_HASHTAGS.get(fact["region"], [])))
         body = f"💡 {text}"
     else:
         hook = HOOKS[index % len(HOOKS)]
         question = QUESTIONS[index % len(QUESTIONS)]
-        hashtags = " ".join(BASE_HASHTAGS + REGION_HASHTAGS.get(fact["region"], []))
+        hashtags = " ".join(dict.fromkeys(BASE_HASHTAGS + REGION_HASHTAGS.get(fact["region"], [])))
         body = f"📅 {fact['year']}: {text}"
 
     caption = (

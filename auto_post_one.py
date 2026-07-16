@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Generate one fresh fact card and post it immediately to the Page.
 
-Mixes two free sources so content isn't limited to pure history:
-  - Wikipedia "On This Day" (date-anchored history facts)
+Mixes three free sources so content isn't limited to pure history:
+  - Wikipedia Pageviews (what's genuinely popular/most-viewed right now --
+    our "most engaged" signal, since Reddit's API is closed to new developers)
   - uselessfacts.jsph.pl (general "anything interesting" facts, any topic)
+  - Wikipedia "On This Day" (date-anchored history facts, for variety)
 
 Designed to be triggered by a scheduled GitHub Actions job (see
 .github/workflows/auto_post.yml) -- each run fetches one new fact (skipping
@@ -25,21 +27,33 @@ from dotenv import load_dotenv
 
 import fetch_facts
 import fetch_trending_facts
+import fetch_viral_facts
 import make_cards
 import generate_captions
 import post_to_facebook
 
-# Weighted toward general "interesting to anyone" content, with history mixed in for variety.
-TRENDING_WEIGHT = 0.6
+# Viral (most-viewed-right-now) weighted highest since that's our "most engaged" proxy,
+# general trending facts second, date-anchored history third for variety.
+SOURCE_WEIGHTS = {"viral": 0.45, "trending": 0.30, "history": 0.25}
 
 
 def get_one_fact(used):
-    """Try the randomly-chosen source first, fall back to the other if it comes up empty."""
+    """Try sources in a weighted-random priority order, falling back through the rest if empty."""
     today = datetime.date.today()
-    sources = ["trending", "history"] if random.random() < TRENDING_WEIGHT else ["history", "trending"]
+    sources = list(SOURCE_WEIGHTS.keys())
+    weights = list(SOURCE_WEIGHTS.values())
+    order = []
+    remaining = list(zip(sources, weights))
+    while remaining:
+        names, wts = zip(*remaining)
+        pick = random.choices(names, weights=wts, k=1)[0]
+        order.append(pick)
+        remaining = [(n, w) for n, w in remaining if n != pick]
 
-    for source in sources:
-        if source == "trending":
+    for source in order:
+        if source == "viral":
+            facts = fetch_viral_facts.pick_viral_facts(count=1, used=used)
+        elif source == "trending":
             facts = fetch_trending_facts.pick_trending_facts(count=1, used=used)
         else:
             events = fetch_facts.fetch_events(today.month, today.day)

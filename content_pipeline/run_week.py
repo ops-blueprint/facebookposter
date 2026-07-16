@@ -25,31 +25,46 @@ sys.path.insert(0, str(BASE_DIR))
 
 import fetch_facts
 import fetch_trending_facts
+import fetch_viral_facts
 import make_cards
 import generate_captions
 
-# Weighted toward general "interesting to anyone" content, with history mixed in for variety.
-TRENDING_WEIGHT = 0.6
+# Viral (most-viewed-right-now) weighted highest since that's our "most engaged" proxy,
+# general trending facts second, date-anchored history third for variety.
+SOURCE_WEIGHTS = {"viral": 0.45, "trending": 0.30, "history": 0.25}
+
+
+def _weighted_source_order():
+    remaining = list(SOURCE_WEIGHTS.items())
+    order = []
+    while remaining:
+        names, weights = zip(*remaining)
+        pick = random.choices(names, weights=weights, k=1)[0]
+        order.append(pick)
+        remaining = [(n, w) for n, w in remaining if n != pick]
+    return order
 
 
 def pick_mixed_facts(date, count, used):
-    """Fill `count` slots by drawing from history + general-trending sources, mixed."""
+    """Fill `count` slots by drawing from viral + trending + history sources, mixed."""
     picked = []
     events = None
     for _ in range(count):
-        source = "trending" if random.random() < TRENDING_WEIGHT else "history"
-        facts = []
-        if source == "trending":
-            facts = fetch_trending_facts.pick_trending_facts(count=1, used=used)
-        if not facts:
-            if events is None:
-                events = fetch_facts.fetch_events(date.month, date.day)
-            facts = fetch_facts.pick_facts(events, count=1, used=used)
-        if not facts:
-            facts = fetch_trending_facts.pick_trending_facts(count=1, used=used)
-        if not facts:
+        fact = None
+        for source in _weighted_source_order():
+            if source == "viral":
+                facts = fetch_viral_facts.pick_viral_facts(count=1, used=used)
+            elif source == "trending":
+                facts = fetch_trending_facts.pick_trending_facts(count=1, used=used)
+            else:
+                if events is None:
+                    events = fetch_facts.fetch_events(date.month, date.day)
+                facts = fetch_facts.pick_facts(events, count=1, used=used)
+            if facts:
+                fact = facts[0]
+                break
+        if not fact:
             break
-        fact = facts[0]
         picked.append(fact)
         used.add(fact["text"][:80])
     return picked

@@ -33,6 +33,8 @@ REGION_FLAG = {"USA": "🇺🇸", "UK": "🇬🇧", "Australia": "🇦🇺", "Eu
 SENSITIVE_KEYWORDS = [
     "assassinat", "mass shooting", "school shooting", "terrorist attack", "suicide bomb",
     "genocide", "massacre", "rape", "sexual assault", "mass murder", "beheading", "lynching",
+    "holocaust", "auschwitz", "concentration camp", "deportation", "ethnic cleansing",
+    "war crime", "torture", "gas chamber", "pogrom",
 ]
 
 
