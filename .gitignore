@@ -6,3 +6,5 @@ fb_auto_poster/.env
 .claude/
 content_pipeline/weekly_job.log
 content_pipeline/weekly_job.err.log
+content_pipeline/output/_auto/
+content_pipeline/output/_auto_reels/
