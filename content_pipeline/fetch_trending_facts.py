@@ -27,7 +27,7 @@ def fetch_one():
     return resp.json()
 
 
-def pick_trending_facts(count, used, max_attempts=30):
+def pick_trending_facts(count, used, max_attempts=30, sensitive_keywords=None):
     picked = []
     attempts = 0
     while len(picked) < count and attempts < max_attempts:
@@ -42,7 +42,7 @@ def pick_trending_facts(count, used, max_attempts=30):
         key = text[:80]
         if key in used or any(p["text"][:80] == key for p in picked):
             continue
-        if is_sensitive(text):
+        if is_sensitive(text, sensitive_keywords):
             continue
         picked.append({
             "region": "Trending",

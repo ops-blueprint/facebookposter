@@ -54,7 +54,7 @@ def first_sentence(text):
     return match.group(0).strip() if match else text
 
 
-def pick_viral_facts(count, used, date=None, max_attempts=15):
+def pick_viral_facts(count, used, date=None, max_attempts=15, sensitive_keywords=None):
     date = date or (datetime.date.today() - datetime.timedelta(days=1))
     try:
         titles = fetch_top_articles(date)
@@ -78,7 +78,7 @@ def pick_viral_facts(count, used, date=None, max_attempts=15):
         text = f"Right now, people are searching for {display_title} on Wikipedia. Here's why: {sentence}"
 
         key = text[:80]
-        if key in used or is_sensitive(text):
+        if key in used or is_sensitive(text, sensitive_keywords):
             continue
 
         picked.append({

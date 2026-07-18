@@ -30,6 +30,7 @@ REGION_FLAG = {"USA": "🇺🇸", "UK": "🇬🇧", "Australia": "🇦🇺", "Eu
 # Skipped entirely in unattended runs -- real "on this day" history includes assassinations,
 # mass-casualty violence, and sexual violence, which are a brand/backlash risk to auto-post
 # with zero human review. Ordinary historical conflict/war facts are NOT filtered.
+# Used by default for general-audience pipelines (NatureWonders9, Instagram is separate).
 SENSITIVE_KEYWORDS = [
     "assassinat", "mass shooting", "school shooting", "terrorist attack", "suicide bomb",
     "genocide", "massacre", "rape", "sexual assault", "mass murder", "beheading", "lynching",
@@ -37,10 +38,15 @@ SENSITIVE_KEYWORDS = [
     "war crime", "torture", "gas chamber", "pogrom",
 ]
 
+# A much shorter, non-negotiable floor -- sexual violence content stays off-limits
+# regardless of a page's niche/brand (e.g. a "dark facts" account can cover
+# assassinations/massacres/genocide as historical education, but not this).
+HARD_FLOOR_KEYWORDS = ["rape", "sexual assault", "molestation", "child abuse", "pedophil"]
 
-def is_sensitive(text):
+
+def is_sensitive(text, keywords=None):
     lowered = text.lower()
-    return any(kw in lowered for kw in SENSITIVE_KEYWORDS)
+    return any(kw in lowered for kw in (keywords or SENSITIVE_KEYWORDS))
 
 
 def load_used():
@@ -69,7 +75,7 @@ def fetch_events(month, day):
     return resp.json().get("events", [])
 
 
-def pick_facts(events, count, used, skip_sensitive=True):
+def pick_facts(events, count, used, skip_sensitive=True, sensitive_keywords=None):
     scored = []
     for e in events:
         text = e.get("text", "").strip()
@@ -78,7 +84,7 @@ def pick_facts(events, count, used, skip_sensitive=True):
         key = text[:80]
         if key in used:
             continue
-        if skip_sensitive and is_sensitive(text):
+        if skip_sensitive and is_sensitive(text, sensitive_keywords):
             continue
         region = tag_region(text)
         year = e.get("year")

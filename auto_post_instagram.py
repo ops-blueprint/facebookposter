@@ -44,7 +44,6 @@ import fetch_facts
 import fetch_trending_facts
 import fetch_viral_facts
 import make_cards
-import generate_captions
 
 GRAPH_API_VERSION = "v20.0"
 DEDUPE_LOG = BASE_DIR / "content_pipeline" / "used_facts_instagram.json"
@@ -52,6 +51,36 @@ REPO_SLUG = "ops-blueprint/facebookposter"  # for building the raw.githubusercon
 IMAGE_REPO_PATH = "content_pipeline/output/instagram"
 
 SOURCE_WEIGHTS = {"viral": 0.45, "trending": 0.30, "history": 0.25}
+
+# @curseorcure3's own brand is "dark facts" -- assassinations/massacres/genocide etc.
+# are the appeal here, not a risk to filter out like on the general-audience pages.
+# Only the hard floor (sexual violence) still applies, regardless of niche.
+DARK_FACTS_KEYWORDS = fetch_facts.HARD_FLOOR_KEYWORDS
+
+DARK_HOOKS = [
+    "The dark truth behind this one 🕯️",
+    "They don't teach you this in school.",
+    "A twisted story most people never hear.",
+    "This one will stay with you.",
+    "Dark fact of the day 🖤",
+]
+
+DARK_QUESTIONS = [
+    "Did you know this one? Tell us below.",
+    "Could you handle knowing the full story?",
+    "Save this if it gave you chills.",
+    "Follow for more dark facts they don't teach you.",
+    "What's the darkest fact YOU know?",
+]
+
+DARK_HASHTAGS = ["#DarkFacts", "#DarkHistory", "#TwistedTruths", "#DidYouKnow", "#CurseOrCure"]
+
+
+def build_dark_caption(fact, index):
+    hook = DARK_HOOKS[index % len(DARK_HOOKS)]
+    question = DARK_QUESTIONS[index % len(DARK_QUESTIONS)]
+    prefix = f"{fact['year']}: " if fact.get("year") else ""
+    return f"{hook}\n\n🖤 {prefix}{fact['text']}\n\n{question}\n\n{' '.join(DARK_HASHTAGS)}"
 
 
 def load_dedupe():
@@ -77,12 +106,12 @@ def get_one_fact(used):
 
     for source in order:
         if source == "viral":
-            facts = fetch_viral_facts.pick_viral_facts(count=1, used=used)
+            facts = fetch_viral_facts.pick_viral_facts(count=1, used=used, sensitive_keywords=DARK_FACTS_KEYWORDS)
         elif source == "trending":
-            facts = fetch_trending_facts.pick_trending_facts(count=1, used=used)
+            facts = fetch_trending_facts.pick_trending_facts(count=1, used=used, sensitive_keywords=DARK_FACTS_KEYWORDS)
         else:
             events = fetch_facts.fetch_events(today.month, today.day)
-            facts = fetch_facts.pick_facts(events, count=1, used=used)
+            facts = fetch_facts.pick_facts(events, count=1, used=used, sensitive_keywords=DARK_FACTS_KEYWORDS)
         if facts:
             return facts[0]
     return None
@@ -171,7 +200,7 @@ def main():
     image_path = out_dir / f"post_{stamp}.png"
     make_cards.make_card(fact, image_path, page_handle="@curseorcure3")
 
-    caption = generate_captions.build_caption(fact, index=hash(fact["text"]) % 5)
+    caption = build_dark_caption(fact, index=hash(fact["text"]) % 5)
 
     image_url = commit_and_push_image(image_path, args.dry_run)
 
