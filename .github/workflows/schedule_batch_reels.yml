@@ -1,16 +1,21 @@
-name: Auto-post reels to Facebook Page (manual/one-off only)
+name: Batch-schedule reels (Facebook native scheduler)
 
-# The `schedule:` trigger was removed on purpose -- same reason as
-# auto_post.yml: GitHub Actions cron is "best-effort" and fires hours late.
-# Regular reel posting now runs through schedule_batch_reels.yml, which
-# uploads reels ahead of time using Facebook's OWN scheduler
-# (scheduled_publish_time, verified to work for /videos same as /photos).
-# This workflow is kept for manual one-off immediate posts only.
+# Same rationale as schedule_batch.yml: this job's own trigger timing doesn't
+# need to be precise since it just needs to run sometime before the current
+# ~29-day buffer of scheduled reels runs out. Facebook's servers handle the
+# actual publish-time precision via scheduled_publish_time.
 on:
-  workflow_dispatch: {}
+  schedule:
+    - cron: "0 4 1,21 * *"   # 1st and 21st of each month, offset from the image-post batch job
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "How many days to schedule (max 29)"
+        required: false
+        default: "29"
 
 jobs:
-  post:
+  schedule:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -29,12 +34,11 @@ jobs:
           pip install -r content_pipeline/requirements.txt
           pip install -r fb_auto_poster/requirements.txt
 
-      - name: Generate and post a 5-fact compilation reel
+      - name: Generate and schedule a batch of reels
         env:
           FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
           FB_PAGE_ACCESS_TOKEN: ${{ secrets.FB_PAGE_ACCESS_TOKEN }}
-          PAGE_HANDLE: "@NatureWonders9"
-        run: python3 auto_post_reel.py
+        run: python3 schedule_batch_reels.py --days "${{ github.event.inputs.days || '29' }}" --handle "@NatureWonders9"
 
       - name: Commit updated dedupe log
         run: |
@@ -42,12 +46,12 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add content_pipeline/used_facts.json
           git diff --cached --quiet && exit 0
-          git commit -m "Update used_facts log (reel) [skip ci]"
+          git commit -m "Update used_facts log (reel batch schedule) [skip ci]"
           for i in 1 2 3 4 5; do
             if git push; then
               exit 0
             fi
-            echo "Push rejected (attempt $i) -- another scheduled job likely pushed first. Rebasing and retrying..."
+            echo "Push rejected (attempt $i) -- retrying..."
             sleep $((RANDOM % 10 + 5))
             git pull --rebase origin main
           done
