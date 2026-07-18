@@ -1,16 +1,22 @@
-name: Auto-post history facts to Facebook Page (manual/one-off only)
+name: Batch-schedule posts (Facebook native scheduler)
 
-# The `schedule:` trigger was removed on purpose: GitHub Actions' cron is
-# "best-effort" and was firing hours late (confirmed on this repo). Regular
-# posting now runs through schedule_batch.yml, which uploads posts ahead of
-# time using Facebook's OWN scheduler (scheduled_publish_time) -- Facebook's
-# servers publish at the exact moment, with no GitHub cron precision involved.
-# This workflow is kept for manual one-off immediate posts only.
+# Runs roughly every 3 weeks -- generates + uploads ~29 days of posts using
+# Facebook's own scheduled_publish_time, so Facebook's servers do the actual
+# publishing at the exact time. This job's own trigger timing doesn't need to
+# be precise (GitHub's cron delay doesn't matter here) since it just needs to
+# run sometime before the current buffer of scheduled posts runs out.
 on:
-  workflow_dispatch: {}
+  schedule:
+    - cron: "0 3 1,21 * *"   # 1st and 21st of each month -- comfortable overlap margin
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "How many days to schedule (max 29)"
+        required: false
+        default: "29"
 
 jobs:
-  post:
+  schedule:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -26,12 +32,11 @@ jobs:
           pip install -r content_pipeline/requirements.txt
           pip install -r fb_auto_poster/requirements.txt
 
-      - name: Generate and post one fact
+      - name: Generate and schedule a batch of posts
         env:
           FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
           FB_PAGE_ACCESS_TOKEN: ${{ secrets.FB_PAGE_ACCESS_TOKEN }}
-          PAGE_HANDLE: "@NatureWonders9"
-        run: python3 auto_post_one.py
+        run: python3 schedule_batch.py --days "${{ github.event.inputs.days || '29' }}" --handle "@NatureWonders9"
 
       - name: Commit updated dedupe log
         run: |
@@ -39,12 +44,12 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add content_pipeline/used_facts.json
           git diff --cached --quiet && exit 0
-          git commit -m "Update used_facts log [skip ci]"
+          git commit -m "Update used_facts log (batch schedule) [skip ci]"
           for i in 1 2 3 4 5; do
             if git push; then
               exit 0
             fi
-            echo "Push rejected (attempt $i) -- another scheduled job likely pushed first. Rebasing and retrying..."
+            echo "Push rejected (attempt $i) -- retrying..."
             sleep $((RANDOM % 10 + 5))
             git pull --rebase origin main
           done

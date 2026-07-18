@@ -67,15 +67,23 @@ def next_queue_item(queue_dir: Path, posted: set):
     return images[0] if images else None
 
 
-def post_photo_to_page(page_id: str, access_token: str, image_path: Path, caption: str, dry_run: bool = False):
+def post_photo_to_page(page_id: str, access_token: str, image_path: Path, caption: str,
+                        dry_run: bool = False, scheduled_publish_time: int = None):
+    """scheduled_publish_time: unix timestamp (UTC). Must be 10 min - 30 days in the
+    future (Facebook's own limit). When set, Facebook publishes the post itself at
+    that exact time -- no dependency on our scheduler's timing precision at all."""
     url = f"https://graph.facebook.com/{GRAPH_API_VERSION}/{page_id}/photos"
     if dry_run:
-        print(f"[dry-run] Would POST {image_path.name} to {url} with caption:\n{caption}\n")
+        when = f" scheduled for {scheduled_publish_time}" if scheduled_publish_time else ""
+        print(f"[dry-run] Would POST {image_path.name} to {url}{when} with caption:\n{caption}\n")
         return {"dry_run": True}
 
     with open(image_path, "rb") as f:
         files = {"source": f}
         data = {"caption": caption, "access_token": access_token}
+        if scheduled_publish_time:
+            data["published"] = "false"
+            data["scheduled_publish_time"] = str(scheduled_publish_time)
         resp = requests.post(url, files=files, data=data, timeout=60)
 
     if not resp.ok:
