@@ -38,13 +38,13 @@ jobs:
           FB_PAGE_ACCESS_TOKEN: ${{ secrets.FB_PAGE_ACCESS_TOKEN }}
         run: python3 schedule_batch.py --days "${{ github.event.inputs.days || '29' }}" --handle "@NatureWonders9"
 
-      - name: Commit updated dedupe log
+      - name: Commit updated dedupe + slot logs
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add content_pipeline/used_facts.json
+          git add content_pipeline/used_facts.json content_pipeline/scheduled_slots_images.json
           git diff --cached --quiet && exit 0
-          git commit -m "Update used_facts log (batch schedule) [skip ci]"
+          git commit -m "Update dedupe/slot logs (batch schedule) [skip ci]"
           for i in 1 2 3 4 5; do
             if git push; then
               exit 0

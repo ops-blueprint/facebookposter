@@ -1,14 +1,21 @@
 #!/usr/bin/env python3
-"""Generate and schedule up to ~29 days of compilation reels, using Facebook's
-own native scheduling (scheduled_publish_time) -- same rationale as
-schedule_batch.py, verified to work identically for /videos as it does for
-/photos (publish_status: scheduled, published: False, confirmed via API).
+"""Generate and schedule a rolling few days of compilation reels at a time,
+using Facebook's own native scheduling (scheduled_publish_time) -- same
+rationale as schedule_batch.py, verified to work identically for /videos as
+it does for /photos (publish_status: scheduled, published: False, confirmed
+via API).
+
+Reels take much longer to generate than image posts (ffmpeg encoding per
+fact), so instead of one big monthly batch, this runs daily with a small
+--days window (default 3) -- each run only fills in slots not already
+scheduled from a prior run (tracked in scheduled_slots_reels.json), so
+reruns are safe and cheap.
 
 Facebook's own limit: scheduled_publish_time must be 10 minutes to 30 days
-from the time of the request, so this fills at most ~29 days per run.
+from the time of the request.
 
 Usage:
-  python3 schedule_batch_reels.py --days 29 --handle "@NatureWonders9"
+  python3 schedule_batch_reels.py --days 3 --handle "@NatureWonders9"
 """
 import argparse
 import datetime
@@ -24,21 +31,23 @@ sys.path.insert(0, str(BASE_DIR / "fb_auto_poster"))
 from dotenv import load_dotenv
 
 from auto_post_one import get_one_fact
-from schedule_batch import parse_times, build_slots
+from schedule_batch import parse_times, build_slots, load_scheduled_slots, save_scheduled_slots
 import fetch_facts
 import make_cards
 import make_reel
 import post_to_facebook
 
 MAX_DAYS = 29
+DEFAULT_DAYS = 3
 FACTS_PER_REEL = 5
 SECONDS_PER_FACT = 4
+SLOT_LOG_PATH = BASE_DIR / "content_pipeline" / "scheduled_slots_reels.json"
 
 
 def main():
     parser = argparse.ArgumentParser(description="Batch-generate and schedule compilation reels")
-    parser.add_argument("--days", type=int, default=MAX_DAYS)
-    parser.add_argument("--times", default="06:00,18:00", help="Comma-separated local times, e.g. 06:00,18:00")
+    parser.add_argument("--days", type=int, default=DEFAULT_DAYS)
+    parser.add_argument("--times", default="12:00,00:00", help="Comma-separated local times, e.g. 12:00,00:00")
     parser.add_argument("--tz-offset-hours", type=float, default=5.5, help="IST = 5.5")
     parser.add_argument("--handle", default="@NatureWonders9")
     parser.add_argument("--dry-run", action="store_true")
@@ -50,9 +59,11 @@ def main():
 
     load_dotenv(BASE_DIR / "fb_auto_poster" / ".env")
     times = parse_times(args.times)
-    slots = build_slots(args.days, times, args.tz_offset_hours)
+    already_scheduled = load_scheduled_slots(SLOT_LOG_PATH)
+    slots = build_slots(args.days, times, args.tz_offset_hours, already_scheduled)
 
-    print(f"Scheduling {len(slots)} reel(s) across {args.days} day(s) x {len(times)} slot(s)/day.")
+    print(f"Scheduling {len(slots)} NEW reel(s) across the next {args.days} day(s) "
+          f"({len(already_scheduled)} slot(s) already covered from prior runs).")
 
     page_id = os.environ.get("FB_PAGE_ID")
     token = os.environ.get("FB_PAGE_ACCESS_TOKEN")
@@ -102,11 +113,13 @@ def main():
         regions = ", ".join(sorted({f["region"] for f in facts}))
         print(f"  [{i}/{len(slots)}] {when} -- {len(facts)} facts ({regions}): {result}")
         scheduled += 1
-
         if not args.dry_run:
+            already_scheduled.add(ts)
             time.sleep(2)
 
     fetch_facts.save_used(used)
+    if not args.dry_run:
+        save_scheduled_slots(SLOT_LOG_PATH, already_scheduled)
     print(f"\nDone. Scheduled {scheduled} reel(s), skipped {skipped}.")
 
 

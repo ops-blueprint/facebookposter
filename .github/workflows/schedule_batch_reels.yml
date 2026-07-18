@@ -1,18 +1,21 @@
 name: Batch-schedule reels (Facebook native scheduler)
 
-# Same rationale as schedule_batch.yml: this job's own trigger timing doesn't
-# need to be precise since it just needs to run sometime before the current
-# ~29-day buffer of scheduled reels runs out. Facebook's servers handle the
-# actual publish-time precision via scheduled_publish_time.
+# Runs daily with a small rolling window (3 days) rather than one big monthly
+# batch -- reels are much slower to generate (ffmpeg encoding per fact) than
+# image posts, so smaller/frequent runs are safer than one long ~30min job.
+# Each run only fills in slots not already scheduled (tracked in
+# scheduled_slots_reels.json), so daily reruns never duplicate a slot.
+# This job's own trigger timing doesn't need to be precise -- Facebook's
+# servers handle the actual publish-time precision via scheduled_publish_time.
 on:
   schedule:
-    - cron: "0 4 1,21 * *"   # 1st and 21st of each month, offset from the image-post batch job
+    - cron: "0 4 * * *"   # once daily, offset from the image-post batch job
   workflow_dispatch:
     inputs:
       days:
-        description: "How many days to schedule (max 29)"
+        description: "How many days ahead to top up (max 29)"
         required: false
-        default: "29"
+        default: "3"
 
 jobs:
   schedule:
@@ -34,19 +37,19 @@ jobs:
           pip install -r content_pipeline/requirements.txt
           pip install -r fb_auto_poster/requirements.txt
 
-      - name: Generate and schedule a batch of reels
+      - name: Generate and schedule the next few days of reels
         env:
           FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
           FB_PAGE_ACCESS_TOKEN: ${{ secrets.FB_PAGE_ACCESS_TOKEN }}
-        run: python3 schedule_batch_reels.py --days "${{ github.event.inputs.days || '29' }}" --handle "@NatureWonders9"
+        run: python3 schedule_batch_reels.py --days "${{ github.event.inputs.days || '3' }}" --handle "@NatureWonders9"
 
-      - name: Commit updated dedupe log
+      - name: Commit updated dedupe + slot logs
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add content_pipeline/used_facts.json
+          git add content_pipeline/used_facts.json content_pipeline/scheduled_slots_reels.json
           git diff --cached --quiet && exit 0
-          git commit -m "Update used_facts log (reel batch schedule) [skip ci]"
+          git commit -m "Update dedupe/slot logs (reel batch schedule) [skip ci]"
           for i in 1 2 3 4 5; do
             if git push; then
               exit 0

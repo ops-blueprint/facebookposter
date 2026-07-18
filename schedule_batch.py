@@ -19,6 +19,7 @@ Usage:
 """
 import argparse
 import datetime
+import json
 import os
 import sys
 import time
@@ -38,6 +39,7 @@ import post_to_facebook
 
 MAX_DAYS = 29  # stays safely under Facebook's 30-day scheduling ceiling
 MIN_LEAD_MINUTES = 15  # stays safely above Facebook's 10-minute minimum
+SLOT_LOG_PATH = BASE_DIR / "content_pipeline" / "scheduled_slots_images.json"
 
 
 def parse_times(times_str):
@@ -48,9 +50,23 @@ def parse_times(times_str):
     return out
 
 
-def build_slots(days, times, tz_offset_hours):
+def load_scheduled_slots(log_path: Path) -> set:
+    """Timestamps we've already scheduled -- lets this run daily/incrementally
+    without re-scheduling the same future slot on every rerun."""
+    if log_path.exists():
+        return set(json.loads(log_path.read_text()))
+    return set()
+
+
+def save_scheduled_slots(log_path: Path, slots: set):
+    log_path.write_text(json.dumps(sorted(slots), indent=2))
+
+
+def build_slots(days, times, tz_offset_hours, already_scheduled=None):
     """Return a sorted list of unix timestamps (UTC) for each day x time slot,
-    skipping any that fall inside the next MIN_LEAD_MINUTES."""
+    skipping any that fall inside the next MIN_LEAD_MINUTES or are already
+    in `already_scheduled`."""
+    already_scheduled = already_scheduled or set()
     now = datetime.datetime.now(datetime.timezone.utc)
     tz = datetime.timezone(datetime.timedelta(hours=tz_offset_hours))
     today_local = now.astimezone(tz).date()
@@ -61,11 +77,14 @@ def build_slots(days, times, tz_offset_hours):
         for hh, mm in times:
             local_dt = datetime.datetime(local_date.year, local_date.month, local_date.day, hh, mm, tzinfo=tz)
             utc_dt = local_dt.astimezone(datetime.timezone.utc)
+            ts = int(utc_dt.timestamp())
             if utc_dt < now + datetime.timedelta(minutes=MIN_LEAD_MINUTES):
                 continue
             if utc_dt > now + datetime.timedelta(days=30):
                 continue
-            slots.append(int(utc_dt.timestamp()))
+            if ts in already_scheduled:
+                continue
+            slots.append(ts)
     return sorted(slots)
 
 
@@ -84,9 +103,11 @@ def main():
 
     load_dotenv(BASE_DIR / "fb_auto_poster" / ".env")
     times = parse_times(args.times)
-    slots = build_slots(args.days, times, args.tz_offset_hours)
+    already_scheduled = load_scheduled_slots(SLOT_LOG_PATH)
+    slots = build_slots(args.days, times, args.tz_offset_hours, already_scheduled)
 
-    print(f"Scheduling {len(slots)} posts across {args.days} day(s) x {len(times)} slot(s)/day.")
+    print(f"Scheduling {len(slots)} NEW post(s) across the next {args.days} day(s) "
+          f"({len(already_scheduled)} slot(s) already covered from prior runs).")
 
     page_id = os.environ.get("FB_PAGE_ID")
     token = os.environ.get("FB_PAGE_ACCESS_TOKEN")
@@ -118,11 +139,15 @@ def main():
         label = f"{fact['region']}, {fact['year']}" if fact.get("year") else fact["region"]
         print(f"  [{i}/{len(slots)}] {when} -- {label}: {result}")
         scheduled += 1
+        if not args.dry_run:
+            already_scheduled.add(ts)
 
         if not args.dry_run:
             time.sleep(2)  # stay well under Graph API rate limits across a long batch
 
     fetch_facts.save_used(used)
+    if not args.dry_run:
+        save_scheduled_slots(SLOT_LOG_PATH, already_scheduled)
     print(f"\nDone. Scheduled {scheduled} post(s), skipped {skipped}.")
 
 
