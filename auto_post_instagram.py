@@ -19,7 +19,8 @@ URL. Ordinary content publish rate limit is far above what we use (2/day vs a
 25/day cap), so no throttling concern.
 
 Setup required (see README section this script's PR/commit message points to):
-  1. An Instagram Business or Creator account, linked to the NatureWonders9 Page
+  1. An Instagram Business account (@curseorcure3), linked to its own Facebook
+     Page (Meme Vault USA) -- a separate Page from NatureWonders9 on purpose
   2. instagram_basic + instagram_content_publish permissions added to the Meta app
   3. IG_USER_ID (the linked Instagram account's numeric ID) and an access token
      with those permissions, saved as IG_ACCESS_TOKEN
@@ -168,7 +169,7 @@ def main():
     out_dir.mkdir(parents=True, exist_ok=True)
     stamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     image_path = out_dir / f"post_{stamp}.png"
-    make_cards.make_card(fact, image_path, page_handle="@NatureWonders9")
+    make_cards.make_card(fact, image_path, page_handle="@curseorcure3")
 
     caption = generate_captions.build_caption(fact, index=hash(fact["text"]) % 5)
 
