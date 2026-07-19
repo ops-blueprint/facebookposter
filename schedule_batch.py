@@ -91,7 +91,8 @@ def build_slots(days, times, tz_offset_hours, already_scheduled=None):
 def main():
     parser = argparse.ArgumentParser(description="Batch-generate and schedule posts via Facebook's native scheduler")
     parser.add_argument("--days", type=int, default=MAX_DAYS)
-    parser.add_argument("--times", default="06:00,18:00", help="Comma-separated local times, e.g. 06:00,18:00")
+    parser.add_argument("--times", default="06:00,09:00,12:00,15:00,18:00,21:00",
+                         help="Comma-separated local times, e.g. 06:00,09:00,12:00,15:00,18:00,21:00")
     parser.add_argument("--tz-offset-hours", type=float, default=5.5, help="IST = 5.5")
     parser.add_argument("--handle", default="@NatureWonders9")
     parser.add_argument("--dry-run", action="store_true")

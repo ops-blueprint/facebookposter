@@ -47,7 +47,8 @@ SLOT_LOG_PATH = BASE_DIR / "content_pipeline" / "scheduled_slots_reels.json"
 def main():
     parser = argparse.ArgumentParser(description="Batch-generate and schedule compilation reels")
     parser.add_argument("--days", type=int, default=DEFAULT_DAYS)
-    parser.add_argument("--times", default="12:00,00:00", help="Comma-separated local times, e.g. 12:00,00:00")
+    parser.add_argument("--times", default="01:00,05:00,09:00,13:00,17:00,21:00",
+                         help="Comma-separated local times, e.g. 01:00,05:00,09:00,13:00,17:00,21:00")
     parser.add_argument("--tz-offset-hours", type=float, default=5.5, help="IST = 5.5")
     parser.add_argument("--handle", default="@NatureWonders9")
     parser.add_argument("--dry-run", action="store_true")

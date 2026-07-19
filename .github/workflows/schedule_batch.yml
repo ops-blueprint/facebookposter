@@ -36,7 +36,9 @@ jobs:
         env:
           FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
           FB_PAGE_ACCESS_TOKEN: ${{ secrets.FB_PAGE_ACCESS_TOKEN }}
-        run: python3 schedule_batch.py --days "${{ github.event.inputs.days || '29' }}" --handle "@NatureWonders9"
+        run: >
+          python3 schedule_batch.py --days "${{ github.event.inputs.days || '29' }}"
+          --times "06:00,09:00,12:00,15:00,18:00,21:00" --handle "@NatureWonders9"
 
       - name: Commit updated dedupe + slot logs
         run: |
